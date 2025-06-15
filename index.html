@@ -1,0 +1,1817 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recarrega + - Vouchers de Recarga</title>
+    
+    <!-- Meta Tags SEO -->
+    <meta name="description" content="Compre vouchers de recarga digital em Angola de forma rápida e segura. A melhor plataforma para recargas online.">
+    <meta name="keywords" content="recarga, voucher, angola, digital, celular, crédito">
+    <meta property="og:title" content="Recarrega + - Vouchers de Recarga">
+    <meta property="og:description" content="A melhor plataforma para compra de vouchers em Angola">
+    <meta property="og:type" content="website">
+    
+    <!-- Bibliotecas Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <!-- jsPDF para gerar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #00b4d8;
+            --primary-dark: #0096c7;
+            --secondary-color: #90e0ef;
+            --background-dark: #121212;
+            --background-light: #1e1e1e;
+            --text-light: #f8f9fa;
+            --text-gray: #adb5bd;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        
+        /* Notificações Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 350px;
+        }
+        
+        .toast {
+            background: var(--background-light);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--info-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: translateX(100%);
+            animation: slideIn 0.3s ease-out forwards;
+            position: relative;
+        }
+        
+        .toast.success { border-left-color: var(--success-color); }
+        .toast.error { border-left-color: var(--danger-color); }
+        .toast.warning { border-left-color: var(--warning-color); }
+        
+        @keyframes slideIn {
+            to { transform: translateX(0); }
+        }
+        
+        @keyframes slideOut {
+            to { transform: translateX(100%); }
+        }
+        
+        .toast-close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-gray);
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9998;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0,180,216,0.2);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Menu Superior */
+        .navbar {
+            background: var(--background-light);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .logo:hover {
+            transform: scale(1.05);
+        }
+        
+        .logo span {
+            color: var(--secondary-color);
+            margin-left: 5px;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 30px;
+        }
+        
+        .nav-links a {
+            color: var(--text-gray);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 5px 0;
+            position: relative;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-links a:hover {
+            color: var(--secondary-color);
+        }
+        
+        .nav-links a.active {
+            color: var(--primary-color);
+        }
+        
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary-color);
+        }
+
+        /* Esconder link de vouchers quando não logado */
+        .nav-links a[href="#vouchers"],
+        .nav-links a[href="#meusVouchers"] {
+            display: none;
+        }
+        
+        /* Menu Mobile */
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Botões de autenticação */
+        .btn-auth {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .btn-auth:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-auth:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-auth.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Conteúdo Principal */
+        .main-content {
+            min-height: calc(100vh - 70px);
+        }
+        
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .page.active-page {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Página Painel Principal */
+        .welcome-container {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-title {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            animation: textGlow 2s infinite alternate;
+        }
+        
+        @keyframes textGlow {
+            from { text-shadow: 0 0 5px rgba(0, 180, 216, 0.5); }
+            to { text-shadow: 0 0 15px rgba(0, 180, 216, 0.8); }
+        }
+        
+        .welcome-message {
+            font-size: 1.2rem;
+            color: var(--text-light);
+            max-width: 800px;
+            margin: 0 auto 30px;
+            line-height: 1.8;
+        }
+        
+        .inspiration-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+        
+        .inspiration-card {
+            background: var(--background-light);
+            border-radius: 10px;
+            padding: 25px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .inspiration-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .inspiration-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .inspiration-text {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+        
+        .quick-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        
+        /* Página Vouchers */
+        .hero {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 20px;
+        }
+        
+        .hero h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        /* Pesquisa Melhorada */
+        .pesquisa {
+            margin: 30px 0;
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+        
+        .pesquisa input {
+            flex: 1;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            background: var(--background-light);
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .pesquisa input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            transform: scale(1.01);
+        }
+        
+        .pesquisa input.error {
+            border-color: var(--danger-color);
+        }
+        
+        .pesquisa button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .pesquisa button:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .pesquisa button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .skeleton-voucher {
+            background: var(--background-light);
+            border-radius: 12px;
+            padding: 20px;
+            height: 200px;
+        }
+        
+        .skeleton-line {
+            height: 20px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        /* Vouchers */
+        .vouchers {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .voucher {
+            background: var(--background-light);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .voucher:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .voucher.sold {
+            opacity: 0.6;
+            border-left-color: var(--text-gray);
+        }
+        
+        .voucher.sold::after {
+            content: 'VENDIDO';
+            position: absolute;
+            top: 10px;
+            right: -25px;
+            background: var(--danger-color);
+            color: white;
+            padding: 5px 30px;
+            font-size: 12px;
+            font-weight: bold;
+            transform: rotate(45deg);
+        }
+        
+        .valor {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 15px 0;
+        }
+        
+        .voucher-info {
+            color: var(--text-gray);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .btn-comprar {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .btn-comprar:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-comprar:disabled {
+            background: var(--text-gray);
+            cursor: not-allowed;
+        }
+        
+        /* Página Meus Vouchers */
+        .my-voucher {
+            background: var(--background-light);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        /* Página Sobre */
+        .about-section {
+            padding: 40px 20px;
+        }
+        
+        .about-content {
+            background: var(--background-light);
+            padding: 30px;
+            border-radius: 10px;
+        }
+        
+        .about-content h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature {
+            background: rgba(0,180,216,0.05);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .feature h3 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        /* Página Contato */
+        .contact-section {
+            padding: 40px 20px;
+        }
+        
+        .contact-form {
+            background: var(--background-light);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+        
+        .contact-form:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .contact-form h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--secondary-color);
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+            outline: none;
+        }
+        
+        .form-group input.error,
+        .form-group textarea.error {
+            border-color: var(--danger-color);
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-error {
+            color: var(--danger-color);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .submit-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Modal Melhorado */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .modal-content {
+            background: var(--background-light);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            opacity: 0;
+            animation: modalOpen 0.3s ease-out forwards;
+            position: relative;
+        }
+        
+        @keyframes modalOpen {
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 24px;
+            color: var(--primary-color);
+            transition: all 0.3s ease;
+            background: none;
+            border: none;
+        }
+        
+        .close-modal:hover {
+            transform: rotate(90deg);
+            color: var(--secondary-color);
+        }
+        
+        .processando {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0,180,216,0.2);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        .codigo-gerado {
+            display: none;
+            background: rgba(0,180,216,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px dashed var(--primary-color);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Botão PDF */
+        .btn-pdf {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-pdf:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* Estilos para os passos do pagamento */
+        .purchase-step {
+            display: none;
+        }
+        
+        .purchase-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .purchase-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn-comprar.outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            flex: 1;
+        }
+        
+        .btn-comprar.outline:hover {
+            background: rgba(0, 180, 216, 0.1);
+        }
+        
+        .purchase-success {
+            text-align: center;
+        }
+        
+        .purchase-success i {
+            color: var(--success-color);
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        .purchase-success h3 {
+            color: var(--success-color);
+            margin-bottom: 10px;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .nav-container {
+                flex-wrap: wrap;
+            }
+            
+            .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                margin-top: 15px;
+            }
+            
+            .nav-links.active {
+                display: flex;
+            }
+            
+            .nav-links li {
+                margin: 5px 0;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+            }
+            
+            .vouchers {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .pesquisa {
+                flex-direction: column;
+            }
+            
+            .welcome-title {
+                font-size: 2rem;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .inspiration-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Dashboard Administrativo */
+        .admin-panel {
+            display: none;
+            background: var(--background-light);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(0,180,216,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .stat-label {
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Menu Superior -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#dashboard" class="logo">Recarrega<span>+</span></a>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#dashboard" class="active">Painel</a></li>
+                <li><a href="#vouchers">Vouchers</a></li>
+                <li><a href="#meusVouchers">Meus Vouchers</a></li>
+                <li><a href="#sobre">Sobre</a></li>
+                <li><a href="#contato">Contato</a></li>
+            </ul>
+            <div id="authSection">
+                <button id="btnLogin" class="btn-auth">Entrar</button>
+                <button id="btnRegister" class="btn-auth">Registrar</button>
+                <span id="userEmail" style="display:none;"></span>
+                <button id="btnLogout" class="btn-auth" style="display:none;">Sair</button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+        <!-- Página Painel Principal -->
+        <div id="dashboard" class="page active-page">
+            <div class="container">
+                <div class="welcome-container">
+                    <h1 class="welcome-title">Bem-vindo ao Recarrega +!</h1>
+                    <p class="welcome-message">
+                        Estamos felizes em tê-lo conosco. Aqui você encontra a maneira mais rápida e segura 
+                        de adquirir vouchers de recarga para seu celular. Comece agora mesmo explorando 
+                        nossos serviços ou conhecendo mais sobre nós.
+                    </p>
+                    
+                    <div class="quick-actions">
+                        <button class="btn-comprar" onclick="showPage('vouchers')">
+                            <i class="fas fa-bolt"></i> Comprar Voucher Agora
+                        </button>
+                        <button class="btn-comprar" style="background: var(--secondary-color); color: var(--background-dark);" onclick="showPage('sobre')">
+                            <i class="fas fa-info-circle"></i> Conheça Nossa História
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Painel Administrativo (apenas para admins) -->
+                <div class="admin-panel" id="adminPanel">
+                    <h3 style="color: var(--primary-color); margin-bottom: 20px;">
+                        <i class="fas fa-chart-bar"></i> Painel Administrativo
+                    </h3>
+                    <div class="admin-stats">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalVouchers">0</div>
+                            <div class="stat-label">Total Vouchers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalVendidos">0</div>
+                            <div class="stat-label">Vendidos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalUsuarios">0</div>
+                            <div class="stat-label">Usuários</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="receitaTotal">0</div>
+                            <div class="stat-label">Receita (Kz)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="inspiration-cards">
+                    <div class="inspiration-card">
+                        <div class="inspiration-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <p class="inspiration-text">
+                            "A velocidade da nossa recarga digital vai surpreender você. Experimente e comprove!"
+                        </p>
+                    </div>
+                    
+                    <div class="inspiration-card">
+                        <div class="inspiration-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <p class="inspiration-text">
+                            "Segurança em primeiro lugar. Todas as suas transações são 100% protegidas."
+                        </p>
+                    </div>
+                    
+                    <div class="inspiration-card">
+                        <div class="inspiration-icon">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        <p class="inspiration-text">
+                            "Nosso suporte está sempre pronto para ajudar. Qualquer dúvida, estamos aqui por você."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Página Vouchers -->
+        <div id="vouchers" class="page">
+            <div class="container">
+                <div class="hero">
+                    <h1>Vouchers de Recarga</h1>
+                    <p>Escolha o valor que deseja recarregar e tenha seu voucher em segundos.</p>
+                </div>
+                
+                <div class="pesquisa">
+                    <input type="text" id="searchInput" placeholder="Pesquisar por valor ou operadora...">
+                    <button id="searchBtn"><i class="fas fa-search"></i> Buscar</button>
+                </div>
+                
+                <div class="vouchers" id="vouchersContainer">
+                    <!-- Vouchers serão carregados aqui via JavaScript -->
+                    <div class="skeleton-voucher">
+                        <div class="skeleton-line" style="width: 60%;"></div>
+                        <div class="skeleton-line" style="width: 80%;"></div>
+                        <div class="skeleton-line" style="width: 40%;"></div>
+                        <div class="skeleton-line" style="width: 100%; height: 40px; margin-top: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Página Meus Vouchers -->
+        <div id="meusVouchers" class="page">
+            <div class="container">
+                <div class="hero">
+                    <h1>Meus Vouchers</h1>
+                    <p>Aqui estão todos os vouchers que você comprou</p>
+                </div>
+                
+                <div id="minhasCompras" class="vouchers">
+                    <!-- Vouchers comprados serão carregados aqui -->
+                    <div class="skeleton-voucher">
+                        <div class="skeleton-line" style="width: 60%;"></div>
+                        <div class="skeleton-line" style="width: 80%;"></div>
+                        <div class="skeleton-line" style="width: 40%;"></div>
+                        <div class="skeleton-line" style="width: 100%; height: 40px; margin-top: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Página Sobre -->
+        <div id="sobre" class="page">
+            <div class="container">
+                <div class="about-section">
+                    <div class="about-content">
+                        <h2>Sobre Nós</h2>
+<p>Somos a Recarrega +, uma plataforma angolana dedicada a simplificar a forma como você adquire créditos para seu celular. Fundada em 2020, nossa missão é trazer conveniência e segurança para suas recargas.</p>
+                        
+                        <div class="features">
+                            <div class="feature">
+                                <h3><i class="fas fa-bolt"></i> Rápido</h3>
+                                <p>Processamos suas recargas em segundos, sem burocracia ou espera desnecessária.</p>
+                            </div>
+                            <div class="feature">
+                                <h3><i class="fas fa-lock"></i> Seguro</h3>
+                                <p>Todas as transações são criptografadas e protegidas com os mais altos padrões de segurança.</p>
+                            </div>
+                            <div class="feature">
+                                <h3><i class="fas fa-hand-holding-usd"></i> Confiável</h3>
+                                <p>Milhares de clientes satisfeitos em todo o território angolano confiam em nossos serviços.</p>
+                            </div>
+                        </div>
+                        
+                        <h3>Nossa Equipe</h3>
+                        <p>Contamos com um time de profissionais dedicados e apaixonados por tecnologia, trabalhando incessantemente para melhorar sua experiência conosco.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Página Contato -->
+        <div id="contato" class="page">
+            <div class="container">
+                <div class="contact-section">
+                    <div class="contact-form">
+                        <h2>Fale Conosco</h2>
+                        <form id="contactForm">
+                            <div class="form-group">
+                                <label for="name">Nome</label>
+                                <input type="text" id="name" required>
+                                <div class="form-error" id="nameError"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" required>
+                                <div class="form-error" id="emailError"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="subject">Assunto</label>
+                                <input type="text" id="subject" required>
+                                <div class="form-error" id="subjectError"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="message">Mensagem</label>
+                                <textarea id="message" required></textarea>
+                                <div class="form-error" id="messageError"></div>
+                            </div>
+                            <button type="submit" class="submit-btn" id="submitContact">Enviar Mensagem</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Modal de Login -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('loginModal')">&times;</button>
+            <h2>Entrar na Conta</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required>
+                    <div class="form-error" id="loginEmailError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Senha</label>
+                    <input type="password" id="loginPassword" required>
+                    <div class="form-error" id="loginPasswordError"></div>
+                </div>
+                <button type="submit" class="submit-btn" id="submitLogin">Entrar</button>
+            </form>
+            <p style="text-align: center; margin-top: 15px;">
+                Não tem conta? <a href="#" onclick="closeModal('loginModal'); showModal('registerModal');" style="color: var(--primary-color);">Registre-se</a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Modal de Registro -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('registerModal')">&times;</button>
+            <h2>Criar Nova Conta</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerName">Nome Completo</label>
+                    <input type="text" id="registerName" required>
+                    <div class="form-error" id="registerNameError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required>
+                    <div class="form-error" id="registerEmailError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Senha</label>
+                    <input type="password" id="registerPassword" required>
+                    <div class="form-error" id="registerPasswordError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">Confirmar Senha</label>
+                    <input type="password" id="registerConfirmPassword" required>
+                    <div class="form-error" id="registerConfirmPasswordError"></div>
+                </div>
+                <button type="submit" class="submit-btn" id="submitRegister">Registrar</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal de Compra - Versão simplificada -->
+    <div class="modal" id="purchaseModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('purchaseModal')">&times;</button>
+            <div id="purchaseSteps">
+                <!-- Passo 1: Detalhes do Voucher -->
+                <div class="purchase-step active" id="step1">
+                    <h2>Confirmar Compra</h2>
+                    <div id="purchaseDetails"></div>
+                    <button class="btn-comprar" onclick="processPayment()">Pagar Agora</button>
+                </div>
+                
+                <!-- Passo 2: Processamento -->
+                <div class="purchase-step" id="step2">
+                    <div class="processando">
+                        <div class="spinner"></div>
+                        <p>Processando seu pagamento...</p>
+                    </div>
+                </div>
+                
+                <!-- Passo 3: Confirmação -->
+                <div class="purchase-step" id="step3">
+                    <div class="purchase-success">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>Pagamento Aprovado!</h3>
+                        <p>Seu voucher foi gerado com sucesso.</p>
+                        
+                        <div class="codigo-gerado">
+                            <h3>Seu Voucher:</h3>
+                            <p id="voucherCode"></p>
+                            <p id="voucherDetails"></p>
+                        </div>
+                        
+                        <button id="generatePDFBtn" class="btn-pdf">
+                            <i class="fas fa-file-pdf"></i> Baixar Voucher em PDF
+                        </button>
+                        
+                        <button class="btn-comprar" onclick="closeModal('purchaseModal'); showPage('meusVouchers');">
+                            Ver Meus Vouchers
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAI32dxjF8zwHcg6RlbmMkoIFMjCKbgM9A",
+            authDomain: "voucher-bf75d.firebaseapp.com",
+            projectId: "voucher-bf75d",
+            storageBucket: "voucher-bf75d.appspot.com", 
+            messagingSenderId: "303110071961",
+            appId: "1:303110071961:web:ed2e56691219b3ad8aba08"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Variáveis globais
+        let currentUser = null;
+        let vouchersData = [];
+        let currentVoucherId = null;
+        
+        // Funções de UI
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+                <p>${message}</p>
+            `;
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+        
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        function toggleMobileMenu() {
+            document.getElementById('navLinks').classList.toggle('active');
+        }
+        
+        function showPage(pageId) {
+            if ((pageId === 'vouchers' || pageId === 'meusVouchers') && !currentUser) {
+                showToast('Você precisa estar logado para acessar esta página', 'error');
+                showModal('loginModal');
+                pageId = 'dashboard';
+            }
+
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active-page');
+            });
+            
+            document.getElementById(pageId).classList.add('active-page');
+            
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            const activeLink = document.querySelector(`.nav-links a[href="#${pageId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            document.getElementById('navLinks').classList.remove('active');
+            window.scrollTo(0, 0);
+            window.location.hash = pageId;
+            
+            if (pageId === 'vouchers' && currentUser) {
+                loadVouchers();
+            } else if (pageId === 'meusVouchers' && currentUser) {
+                loadComprasDoUsuario();
+            }
+        }
+
+        // Funções de navegação do modal de compra
+        function nextStep(stepNumber) {
+            document.querySelector('#purchaseSteps .active').classList.remove('active');
+            document.getElementById(`step${stepNumber}`).classList.add('active');
+        }
+
+        // Funções de Autenticação
+        function setupAuthUI(user) {
+            const authSection = document.getElementById('authSection');
+            const userEmailSpan = document.getElementById('userEmail');
+            const btnLogin = document.getElementById('btnLogin');
+            const btnRegister = document.getElementById('btnRegister');
+            const btnLogout = document.getElementById('btnLogout');
+            const adminPanel = document.getElementById('adminPanel');
+            const voucherLinks = document.querySelectorAll('.nav-links a[href="#vouchers"], .nav-links a[href="#meusVouchers"]');
+            
+            if (user) {
+                currentUser = user;
+                userEmailSpan.textContent = user.email;
+                userEmailSpan.style.display = 'inline';
+                btnLogin.style.display = 'none';
+                btnRegister.style.display = 'none';
+                btnLogout.style.display = 'inline';
+                voucherLinks.forEach(link => link.style.display = 'block');
+                
+                checkAdminStatus(user.uid);
+                
+                if (window.location.hash === '#vouchers') {
+                    loadVouchers();
+                } else if (window.location.hash === '#meusVouchers') {
+                    loadComprasDoUsuario();
+                }
+            } else {
+                currentUser = null;
+                userEmailSpan.style.display = 'none';
+                btnLogin.style.display = 'inline';
+                btnRegister.style.display = 'inline';
+                btnLogout.style.display = 'none';
+                adminPanel.style.display = 'none';
+                voucherLinks.forEach(link => link.style.display = 'none');
+                
+                if (window.location.hash === '#vouchers' || window.location.hash === '#meusVouchers') {
+                    showPage('dashboard');
+                }
+            }
+        }
+        
+        function checkAdminStatus(userId) {
+            db.collection('admins').doc(userId).get()
+                .then(doc => {
+                    const adminPanel = document.getElementById('adminPanel');
+                    if (doc.exists) {
+                        adminPanel.style.display = 'block';
+                        loadAdminStats();
+                    } else {
+                        adminPanel.style.display = 'none';
+                    }
+                });
+        }
+        
+        function loadAdminStats() {
+            db.collection('stats').doc('vouchers').get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const stats = doc.data();
+                        document.getElementById('totalVouchers').textContent = stats.totalVouchers || 0;
+                        document.getElementById('totalVendidos').textContent = stats.totalSold || 0;
+                        document.getElementById('totalUsuarios').textContent = stats.totalUsers || 0;
+                        document.getElementById('receitaTotal').textContent = stats.totalRevenue ? stats.totalRevenue.toLocaleString('pt-BR') : 0;
+                    }
+                });
+        }
+        
+        function login(email, password) {
+            showLoading(true);
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    showToast('Login realizado com sucesso!', 'success');
+                    closeModal('loginModal');
+                    setupAuthUI(userCredential.user);
+                })
+                .catch((error) => {
+                    showToast(error.message, 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        function register(name, email, password) {
+            showLoading(true);
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        name: name,
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                })
+                .then(() => {
+                    showToast('Conta criada com sucesso!', 'success');
+                    closeModal('registerModal');
+                    setupAuthUI(auth.currentUser);
+                })
+                .catch((error) => {
+                    showToast(error.message, 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        function logout() {
+            showLoading(true);
+            auth.signOut()
+                .then(() => {
+                    showToast('Logout realizado com sucesso', 'success');
+                    setupAuthUI(null);
+                    showPage('dashboard');
+                })
+                .catch((error) => {
+                    showToast(error.message, 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Funções de Vouchers
+        function loadVouchers() {
+            showLoading(true);
+            const listDiv = document.getElementById("vouchersContainer");
+            listDiv.innerHTML = '<div class="skeleton-voucher"><div class="skeleton-line" style="width: 60%;"></div><div class="skeleton-line" style="width: 80%;"></div><div class="skeleton-line" style="width: 40%;"></div><div class="skeleton-line" style="width: 100%; height: 40px; margin-top: 20px;"></div></div>';
+
+            db.collection("vouchers").where("sold", "==", false).get()
+                .then(snapshot => {
+                    if (snapshot.empty) {
+                        listDiv.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">🚫 Nenhum voucher disponível.</p>';
+                        return;
+                    }
+
+                    let html = "";
+                    snapshot.forEach(doc => {
+                        const v = doc.data();
+                        vouchersData.push({...v, id: doc.id});
+                        
+                        html += `
+                            <div class="voucher">
+                                <h3>${v.operator || 'Recarga'}</h3>
+                                <div class="valor">${v.value} Kz</div>
+                                <div class="voucher-info">
+                                    <p><i class="fas fa-tag"></i> Código: <em>Oculto até compra</em></p>
+                                    <p><i class="fas fa-calendar-alt"></i> Validade: ${v.expiry}</p>
+                                </div>
+                                <button class="btn-comprar" onclick="comprarVoucher('${doc.id}')">
+                                    Comprar Agora
+                                </button>
+                            </div>
+                        `;
+                    });
+
+                    listDiv.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("Erro ao carregar vouchers:", err);
+                    listDiv.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Erro ao carregar vouchers.</p>';
+                    showToast('Erro ao carregar vouchers', 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+
+        function comprarVoucher(voucherId) {
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Você precisa estar logado.");
+                return;
+            }
+
+            const voucherRef = db.collection("vouchers").doc(voucherId);
+
+            db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(voucherRef);
+                if (!doc.exists || doc.data().sold) {
+                    alert("Este voucher já foi vendido.");
+                    throw "Voucher indisponível";
+                }
+
+                const data = doc.data();
+                transaction.update(voucherRef, { 
+                    sold: true,
+                    soldTo: user.uid,
+                    soldAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                await db.collection("users").doc(user.uid).collection("purchases").add({
+                    voucherId: voucherId,
+                    code: data.code,
+                    value: data.value,
+                    operator: data.operator,
+                    expiry: data.expiry,
+                    price: data.price,
+                    purchasedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Atualizar estatísticas
+                await db.collection("stats").doc("vouchers").update({
+                    totalSold: firebase.firestore.FieldValue.increment(1),
+                    totalRevenue: firebase.firestore.FieldValue.increment(data.price)
+                });
+
+                // Mostrar código ao usuário
+                alert(`✅ Compra efetuada com sucesso!\nCódigo: ${data.code}`);
+                
+                // Recarregar a lista de vouchers
+                loadVouchers();
+                
+                // Recarregar os vouchers do usuário
+                if (window.location.hash === '#meusVouchers') {
+                    loadComprasDoUsuario();
+                }
+            }).catch((err) => {
+                console.error("Erro ao comprar:", err);
+                if (err !== "Voucher indisponível") {
+                    alert("Erro ao processar a compra.");
+                }
+            });
+        }
+
+        function loadComprasDoUsuario() {
+            const user = auth.currentUser;
+            const div = document.getElementById("minhasCompras");
+
+            if (!user) {
+                div.innerHTML = "⚠️ Faça login para ver suas compras.";
+                return;
+            }
+
+            div.innerHTML = '<div class="skeleton-voucher"><div class="skeleton-line" style="width: 60%;"></div><div class="skeleton-line" style="width: 80%;"></div><div class="skeleton-line" style="width: 40%;"></div><div class="skeleton-line" style="width: 100%; height: 40px; margin-top: 20px;"></div></div>';
+
+            db.collection("users").doc(user.uid).collection("purchases").orderBy("purchasedAt", "desc").get()
+                .then(snapshot => {
+                    if (snapshot.empty) {
+                        div.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Você ainda não comprou nenhum voucher.</p>';
+                        return;
+                    }
+
+                    let html = "";
+                    snapshot.forEach(doc => {
+                        const d = doc.data();
+                        const data = d.purchasedAt?.toDate().toLocaleString() || "(sem data)";
+                        html += `
+                            <div class="my-voucher">
+                                <h3>${d.operator || 'Recarga'}</h3>
+                                <div class="valor">${d.value} Kz</div>
+                                <div class="voucher-info">
+                                    <p><i class="fas fa-tag"></i> Código: ${d.code}</p>
+                                    <p><i class="fas fa-money-bill-wave"></i> Pago: ${d.price} Kz</p>
+                                    <p><i class="fas fa-calendar-alt"></i> Data: ${data}</p>
+                                    <p><i class="fas fa-calendar-alt"></i> Validade: ${d.expiry}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    div.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("Erro ao carregar compras:", err);
+                    div.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Erro ao carregar suas compras.</p>';
+                    showToast('Erro ao carregar seus vouchers', 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+
+        function preparePurchase(voucherId, voucherData) {
+            currentVoucherId = voucherId;
+            
+            const purchaseDetails = document.getElementById('purchaseDetails');
+            purchaseDetails.innerHTML = `
+                <h3>${voucherData.operator || 'Recarga'} - ${voucherData.value} Kz</h3>
+                <p>Você está prestes a comprar um voucher de recarga no valor de <strong>${voucherData.value} Kz</strong>.</p>
+                <p>Preço: <strong>${voucherData.price} Kz</strong></p>
+            `;
+            
+            // Resetar o modal para o primeiro passo
+            document.querySelectorAll('.purchase-step').forEach(step => {
+                step.classList.remove('active');
+            });
+            document.getElementById('step1').classList.add('active');
+            
+            showModal('purchaseModal');
+        }
+
+        function processPayment() {
+            const voucher = vouchersData.find(v => v.id === currentVoucherId);
+            if (!voucher) {
+                showToast('Voucher não encontrado', 'error');
+                closeModal('purchaseModal');
+                return;
+            }
+
+            nextStep(2);
+            
+            // Simular processamento do pagamento
+            setTimeout(() => {
+                completePurchase();
+            }, 2000);
+        }
+
+        function completePurchase() {
+            const voucher = vouchersData.find(v => v.id === currentVoucherId);
+            if (!voucher) {
+                showToast('Voucher não encontrado', 'error');
+                closeModal('purchaseModal');
+                return;
+            }
+            
+            db.collection("vouchers").doc(currentVoucherId).update({
+                sold: true,
+                soldTo: currentUser.uid,
+                soldAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                return db.collection("users").doc(currentUser.uid).collection("purchases").add({
+                    voucherId: currentVoucherId,
+                    value: voucher.value,
+                    price: voucher.price,
+                    purchasedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }).then(() => {
+                // Atualizar estatísticas
+                db.collection("stats").doc("vouchers").update({
+                    totalSold: firebase.firestore.FieldValue.increment(1),
+                    totalRevenue: firebase.firestore.FieldValue.increment(voucher.price)
+                });
+
+                // Mostrar confirmação
+                document.getElementById('voucherCode').textContent = voucher.code;
+                document.getElementById('voucherDetails').textContent = `${voucher.operator || 'Recarga'} - ${voucher.value} Kz`;
+                
+                // Configurar botão de download PDF
+                document.getElementById('generatePDFBtn').onclick = () => {
+                    generateVoucherPDF(voucher);
+                };
+                
+                nextStep(3);
+                loadVouchers();
+                loadComprasDoUsuario();
+            }).catch(error => {
+                console.error("Erro na compra:", error);
+                showToast('Ocorreu um erro ao concluir a compra', 'error');
+                closeModal('purchaseModal');
+            });
+        }
+
+        function generateVoucherPDF(voucher) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(22);
+            doc.setTextColor(0, 180, 216);
+            doc.text('Recarrega +', 105, 20, null, null, 'center');
+            
+            doc.setFontSize(16);
+            doc.setTextColor(0, 0, 0);
+            doc.text('COMPROVANTE DE RECARGA', 105, 35, null, null, 'center');
+            
+            doc.setFontSize(12);
+            doc.text(`Operadora: ${voucher.operator || 'Recarga'}`, 20, 50);
+            doc.text(`Valor: ${voucher.value} Kz`, 20, 60);
+            doc.text(`Código: ${voucher.code}`, 20, 70);
+            doc.text(`Validade: ${voucher.expiry}`, 20, 80);
+            doc.text(`Data da Compra: ${new Date().toLocaleDateString()}`, 20, 90);
+            
+            doc.setFontSize(24);
+            doc.setTextColor(0, 180, 216);
+            doc.text(voucher.code, 105, 120, null, null, 'center');
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Como usar: Ligue *123# e insira o código acima quando solicitado', 105, 140, null, null, 'center');
+            doc.text('Ou envie uma mensagem SMS com o código para 1234', 105, 145, null, null, 'center');
+            
+            doc.save(`Voucher_${voucher.operator || 'Recarga'}_${voucher.value}Kz.pdf`);
+        }
+        
+        // Funções de Contato
+        function submitContactForm(name, email, subject, message) {
+            showLoading(true);
+            
+            setTimeout(() => {
+                showLoading(false);
+                showToast('Mensagem enviada com sucesso! Entraremos em contato em breve.', 'success');
+                document.getElementById('contactForm').reset();
+            }, 1500);
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar navegação
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pageId = this.getAttribute('href').substring(1);
+                    
+                    if ((pageId === 'vouchers' || pageId === 'meusVouchers') && !currentUser) {
+                        showToast('Faça login para acessar esta página', 'error');
+                        showModal('loginModal');
+                        return;
+                    }
+                    
+                    showPage(pageId);
+                });
+            });
+            
+            // Configurar autenticação
+            document.getElementById('btnLogin').addEventListener('click', () => showModal('loginModal'));
+            document.getElementById('btnRegister').addEventListener('click', () => showModal('registerModal'));
+            document.getElementById('btnLogout').addEventListener('click', logout);
+            
+            // Configurar formulário de login
+            document.getElementById('loginForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+                login(email, password);
+            });
+            
+            // Configurar formulário de registro
+            document.getElementById('registerForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('registerName').value;
+                const email = document.getElementById('registerEmail').value;
+                const password = document.getElementById('registerPassword').value;
+                const confirmPassword = document.getElementById('registerConfirmPassword').value;
+                
+                if (password !== confirmPassword) {
+                    showToast('As senhas não coincidem', 'error');
+                    return;
+                }
+                
+                register(name, email, password);
+            });
+            
+            // Configurar formulário de contato
+            document.getElementById('contactForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('name').value;
+                const email = document.getElementById('email').value;
+                const subject = document.getElementById('subject').value;
+                const message = document.getElementById('message').value;
+                submitContactForm(name, email, subject, message);
+            });
+            
+            // Configurar busca de vouchers
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                const filteredVouchers = vouchersData.filter(voucher => 
+                    voucher.value.toString().includes(searchTerm) || 
+                    (voucher.operator && voucher.operator.toLowerCase().includes(searchTerm)) ||
+                    (voucher.type && voucher.type.toLowerCase().includes(searchTerm))
+                );
+                
+                const vouchersContainer = document.getElementById('vouchersContainer');
+                vouchersContainer.innerHTML = '';
+                
+                if (filteredVouchers.length === 0) {
+                    vouchersContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Nenhum voucher encontrado</p>';
+                    return;
+                }
+                
+                filteredVouchers.forEach(voucher => {
+                    const voucherElement = document.createElement('div');
+                    voucherElement.className = 'voucher';
+                    voucherElement.innerHTML = `
+                        <h3>${voucher.operator || 'Recarga'}</h3>
+                        <div class="valor">${voucher.value} Kz</div>
+                        <div class="voucher-info">
+                            <p><i class="fas fa-tag"></i> Código: <em>Oculto até compra</em></p>
+                            <p><i class="fas fa-calendar-alt"></i> Validade: ${voucher.expiry}</p>
+                        </div>
+                        <button class="btn-comprar" onclick="comprarVoucher('${voucher.id}')">
+                            Comprar Agora
+                        </button>
+                    `;
+                    
+                    vouchersContainer.appendChild(voucherElement);
+                });
+            });
+            
+            // Observar estado de autenticação
+            auth.onAuthStateChanged(user => {
+                setupAuthUI(user);
+            });
+            
+            // Verificar a página inicial ao carregar
+            const hash = window.location.hash.substring(1);
+            if ((hash === 'vouchers' || hash === 'meusVouchers') && !currentUser) {
+                showToast('Faça login para acessar esta página', 'error');
+                showModal('loginModal');
+                showPage('dashboard');
+            } else {
+                showPage(hash || 'dashboard');
+            }
+        });
+    </script>
+</body>
+</html>
